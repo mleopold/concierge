@@ -90,7 +90,7 @@ def greengrass_infinite_infer_run():
             inferOutput = model.doInference(frameResize)
 
             # Output inference result to the fifo file so it can be viewed with mplayer
-            parsed_results = model.parseResult(modelType, inferOutput)['ssd']
+            parsed_results = model.parseResult(modelType, inferOutput)[modelType]
             label = '{'
             for obj in parsed_results:
                 if obj['prob'] > max_threshold:
