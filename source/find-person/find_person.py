@@ -148,7 +148,7 @@ def greengrass_infinite_infer_run():
             label += '}'
 
             global jpeg
-            ret,jpeg = cv2.imencode('.jpg', frame)
+            ret,jpeg = cv2.imencode('.jpg', cv2.resize(frame, (858, 480)))
 
     except Exception as e:
         print "Crap, something failed: %s" % str(e)
