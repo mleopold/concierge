@@ -5,12 +5,9 @@ import datetime
 import awscam
 import cv2
 from botocore.session import Session
-from threading import Thread
+from threading import Thread,Event,RLock
 
 # Setup the S3 client
-session = Session()
-s3 = session.create_client('s3')
-s3_bucket = os.environ['BUCKET_NAME']
 is_deeplens_upside_down = os.environ['IS_DEEPLENS_UPSIDE_DOWN']
 
 print "is_deeplens_upside_down variable is set to: %s" % os.environ['IS_DEEPLENS_UPSIDE_DOWN']
@@ -43,6 +40,37 @@ class FIFO_Thread(Thread):
             except IOError as e:
                 continue
 
+class S3Uploader(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+        self.go = Event()
+        self.sem = RLock()
+        self.s3 = Session().create_client('s3')
+        self.s3_bucket = os.environ['BUCKET_NAME']
+        
+    def run(self):
+        while True:
+            self.go.wait()
+            self.sem.acquire()
+            jpeg_data = self.jpeg_data
+            self.sem.release()
+
+            # create a nice s3 file key
+            s3_key = datetime.datetime.utcnow().strftime('%Y-%m-%d_%H_%M_%S.%f') + '.jpg'
+            filename = "incoming/%s" % s3_key  # the guess lambda function is listening here
+            response = self.s3.put_object(Body=jpeg_data.tostring(),Bucket=self.s3_bucket,Key=filename)
+            print "Upload S3 to: %s in bucket %s" % (filename,self.s3_bucket)
+            self.go.clear()
+
+    def set_frame_data(self, frame):
+        dim = frame.shape
+        if len(dim)==3 and dim[0]>0 and dim[1]>0 and self.sem.acquire(False) == True:
+            encode_param=[int(cv2.IMWRITE_JPEG_QUALITY), 90]  # 90% should be more than enough
+            _, jpeg_data = cv2.imencode('.jpg', frame, encode_param)
+            self.jpeg_data = jpeg_data
+            self.sem.release()
+            self.go.set()
+
 def greengrass_infinite_infer_run():
     try:
         modelPath = "/opt/awscam/artifacts/mxnet_deploy_ssd_resnet50_300_FP16_FUSED.xml"
@@ -54,6 +82,9 @@ def greengrass_infinite_infer_run():
         results_thread = FIFO_Thread()
         results_thread.start()
 
+        s3_thread = S3Uploader()
+        s3_thread.start()
+        
         # Load model to GPU
         mcfg = {"GPU": 1}
         model = awscam.Model(modelPath, mcfg)
@@ -106,13 +137,7 @@ def greengrass_infinite_infer_run():
 
                         # get the person image
                         person = frame[ymin:ymax, xmin:xmax]
-
-                        # create a nice s3 file key
-                        s3_key = datetime.datetime.utcnow().strftime('%Y-%m-%d_%H_%M_%S.%f') + '.jpg'
-                        encode_param=[int(cv2.IMWRITE_JPEG_QUALITY), 90]  # 90% should be more than enough
-                        _, jpg_data = cv2.imencode('.jpg', person, encode_param)
-                        filename = "incoming/%s" % s3_key  # the guess lambda function is listening here
-                        response = s3.put_object(ACL='public-read', Body=jpg_data.tostring(),Bucket=s3_bucket,Key=filename)
+                        s3_thread.set_frame_data(person)
 
                     # draw a rectangle around the designated area, and tell what label was found
                     cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
