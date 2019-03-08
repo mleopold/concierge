@@ -95,6 +95,11 @@ You will find the log concierge-trigger-open, example bellow
 [INFO]-trigger_open.py:75,closing door
 ```
 
+Details
+---
+Concierge is comprised of a number if interacting AWS services. The following drawing illustrate how they interact.
+![Concierge architecture](/ConciergeArchitecture.svg?raw=true "Concierge architecture")
+
 Tweaking
 ---
 There is a hack due to there is no state on the deeplens / aws side, for every detection (every frame it processes) it will fire away a open command. To not let the trigger_open get 20 open commands at the same time, there is a deplay / ratelimit in the code to wait for X amount of seconds after the first open command. Default is 5 and it is defined in the file trigger_open.py as the variable open_delay_seconds 
