@@ -6,7 +6,6 @@ import awscam
 import cv2
 from botocore.session import Session
 from threading import Thread
-from time import sleep
 
 # Setup the S3 client
 session = Session()
@@ -92,7 +91,9 @@ def greengrass_infinite_infer_run():
             # Output inference result to the fifo file so it can be viewed with mplayer
             parsed_results = model.parseResult(modelType, inferOutput)[modelType]
             label = '{'
+            last_person = 0.0
             for obj in parsed_results:
+                now = time.time()
                 if obj['prob'] > max_threshold:
                     xmin = int( xscale * obj['xmin'] ) + int((obj['xmin'] - input_width/2) + input_width/2)
                     ymin = int( yscale * obj['ymin'] )
@@ -100,7 +101,8 @@ def greengrass_infinite_infer_run():
                     ymax = int( yscale * obj['ymax'] )
 
                     # if a person was found, upload the target area to S3 for further inspection
-                    if outMap[obj['label']] == 'person':
+                    if outMap[obj['label']] == 'person' and now-last_person > 2.0:
+                        last_person = now
 
                         # get the person image
                         person = frame[ymin:ymax, xmin:xmax]
@@ -111,7 +113,6 @@ def greengrass_infinite_infer_run():
                         _, jpg_data = cv2.imencode('.jpg', person, encode_param)
                         filename = "incoming/%s" % s3_key  # the guess lambda function is listening here
                         response = s3.put_object(ACL='public-read', Body=jpg_data.tostring(),Bucket=s3_bucket,Key=filename)
-                        time.sleep(2)
 
                     # draw a rectangle around the designated area, and tell what label was found
                     cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (255, 165, 20), 4)
