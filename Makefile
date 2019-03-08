@@ -19,7 +19,7 @@ sam_deploy = aws cloudformation deploy \
                 --capabilities CAPABILITY_IAM \
                 --no-fail-on-empty-changeset
 
-deploy:
+all:
 	@mkdir -p dist
 	# golang
 	cd source/guess; GOOS=linux go build -ldflags="-s -w" -o main && zip deployment.zip main
@@ -31,11 +31,12 @@ deploy:
 		&& cd dist; zip deployment.zip *
 	docker run -v ${PWD}/source/trigger-open:/app -w /app -it python:2.7-alpine sh -c "pip install -r requirements.txt -t ./dist; chmod -R 777 dist"
 		cd source/trigger-open && cp trigger_open.py dist/ \
-		&& cd dist/ && zip -r deployment.zip * && cp deployment.zip /tmp&& cp deployment.zip /tmp
+		&& cd dist/ && zip -r deployment.zip *
+
+deploy:
 	# sam
 	$(call sam_package)
 	$(call sam_deploy)
-	@rm -rf source/*/main source/*/deployment.zip source/*/dist dist
 
 clean:
 	@rm -rf source/*/main source/*/deployment.zip source/*/dist dist
