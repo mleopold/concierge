@@ -25,6 +25,7 @@ Setup
 ---
 Quite a few steps, needs cleanup, most of it can be automated.
 
+- Deeplens is ony available in the region us-east-1, so don't forget to deploy the rest of your resources here
 - Fix 'parameters.conf' file to fit your environment
 - You can find the IoTEndpoint value by running aws --region {region} iot describe-endpoint or the AWS IOT console (make sure you are in the right region) and settings. You will find the value as "Endpoint",  direct url https://console.aws.amazon.com/iot/home?region=<YOUR-REGION>#/settings
 - Create a new policy and then attach it to the AWSDeepLensGreengrassGroupRole role, make sure to update the BucketName-from-parameters.conf from bellow to the actual value from parameters.conf
@@ -47,12 +48,14 @@ Quite a few steps, needs cleanup, most of it can be automated.
     ]
 }
 ```
-- Create a Rekognition collection (in the same region as in params.conf) using [aws cli](https://docs.aws.amazon.com/cli/latest/reference/rekognition/create-collection.html)
+- Create a Rekognition collection (in the same region as in params.conf) using [aws cli](https://docs.aws.amazon.com/cli/latest/reference/rekognition/create-collection.html), e.g.
+  ```aws rekognition create-collection --collection-id concierge```
 
 - Deploy the Lambda functions with make (verify env variables in the Makefile)
 
 - Go into the deeplens console, and create a project, choose "Use a project template" select the "Object detection" model
 - Remove the `deeplens-object-detection` function, and add a function for `find_person` and `trigger_open`
+  - Leave out `trigger_open` if you don't plan to use this way of unlocking the door
 - If its empty when you start you can choose to add the deeplens-object-detection model and add the `find_person` and `trigger_open` function.
 - Deploy the application to your deeplens
 
