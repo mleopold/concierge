@@ -98,7 +98,7 @@ You will find the log concierge-trigger-open, example bellow
 Details
 ---
 Concierge is comprised of a number if interacting AWS services. The following drawing illustrate how they interact.
-![Concierge architecture](/ConciergeArchitecture.svg?raw=true "Concierge architecture")
+![Concierge architecture](/ConciergeArchitecture.svg "Concierge architecture")
 
 Tweaking
 ---
