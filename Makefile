@@ -34,6 +34,12 @@ source/train/deployment.zip: source/train/main.go
 
 source/find-person/deployment.zip: source/find-person/find_person.py
 	cd source/find-person; mkdir dist \
+
+source/find-person/dist:
+	mkdir source/find-person/dist
+
+source/find-person/dist/deployment.zip: source/find-person/find_person.py source/find-person/dist
+	cd source/find-person \
 		&& cp find_person.py dist/ \
 		&& cd dist; zip deployment.zip *
 
