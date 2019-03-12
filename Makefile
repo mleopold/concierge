@@ -5,7 +5,7 @@ STACK_NAME         =  concierge
 ARTIFACTS_BUCKET   =  bucket-name-for-lambda-deployment
 AWS_DEFAULT_REGION ?= us-east-1
 
-DEPLOY_DEPS = source/guess/deployment.zip source/train/deployment.zip source/notify-teams/deployment.zip source/trigger-open/dist/deployment.zip source/find-person/dist/deployment.zip
+DEPLOY_DEPS = source/guess/deployment.zip source/train/deployment.zip source/notify-teams/deployment.zip source/trigger-open/dist/deployment.zip source/find-person/dist/deployment.zip source/rate-limit/deployment.zip
 
 sam_package = aws cloudformation package \
                 --template-file sam.yaml \
@@ -35,13 +35,13 @@ source/train/deployment.zip: source/train/main.go
 source/notify-teams/deployment.zip: source/notify-teams/main.go
 	cd source/notify-teams; GOOS=linux go build -ldflags="-s -w" -o main && zip deployment.zip main
 
-source/find-person/dist:
-	mkdir source/find-person/dist
-
-source/find-person/dist/deployment.zip: source/find-person/find_person.py source/find-person/dist
-	cd source/find-person \
+source/find-person/dist/deployment.zip: source/find-person/find_person.py
+	cd source/find-person &&  mkdir -p source/find-person/dist/ \
 		&& cp find_person.py dist/ \
 		&& cd dist; zip deployment.zip *
+
+source/rate-limit/deployment.zip: source/rate-limit/rate_limit.py
+	cd source/rate-limit && zip deployment.zip rate_limit.py
 
 source/trigger-open/dist/deployment.zip: source/trigger-open/trigger_open.py
 	docker run -v ${PWD}/source/trigger-open:/app -w /app -it python:2.7-alpine sh -c "pip install -r requirements.txt -t ./dist; chmod -R 777 dist"

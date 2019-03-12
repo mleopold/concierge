@@ -20,6 +20,9 @@ Parameters:
   IoTTopic:
     Type: String
     
+  IoTTopicRateLimited:
+    Type: String
+    
   IsDeeplensUpsideDown:
     Type: String
 
@@ -27,6 +30,9 @@ Parameters:
     Type: String
 
   RelayUsbDevice: 
+    Type: String
+
+  DynamoDBTableName: 
     Type: String
 
 
@@ -266,7 +272,6 @@ Resources:
           BUCKET_NAME: !Ref BucketName
           REKOGNITION_COLLECTION_ID: !Ref RekognitionCollectionID
           IOT_TOPIC: !Ref IoTTopic
-          TEAMS_WEBHOOK: !Ref TeamsWebhook
       Events:
         imageEvent:
           Type: S3
@@ -278,6 +283,29 @@ Resources:
                 Rules:
                   - Name: prefix
                     Value: incoming/
+  rateLimit:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: concierge-rate-limit
+      Description: "concierge - limit rate of detection events"
+      Handler: find_person.function_handler
+      Role: !GetAtt greengrassRole.Arn
+      Runtime: python2.7
+      MemorySize: 2048
+      Timeout: 10
+      CodeUri: ./source/find-person/dist/deployment.zip
+      AutoPublishAlias: prod
+      Environment:
+        Variables:
+          OPEN_RATE: 60
+          UNKOWN_RATE: 60
+          IOT_TOPPIC: !Ref IoTTopicRateLimited
+          DYNAMODB_TABLE: !Ref DynamoDBTableName
+      Events:
+        detectedEvent:
+          Type: IoTRule
+          Properties:
+            Sql: !Sub "SELECT * FROM '${IoTTopic}'"
 
   notifyTeams:
     Type: AWS::Serverless::Function
@@ -295,7 +323,11 @@ Resources:
           BUCKET_NAME: !Ref BucketName
           TEAMS_WEBHOOK: !Ref TeamsWebhook
           TRAIN_URL: !Sub https://${conciergeApi}.execute-api.${AWS::Region}.amazonaws.com/api/faces/train
-
+      Events:
+        detectedEvent:
+          Type: IoTRule
+          Properties:
+            Sql: !Sub "SELECT * FROM '${IoTTopicRateLimited}'"
 
 # greengrass
   findPerson:
@@ -335,6 +367,25 @@ Resources:
           DeepLensDeviceReadAndWrite: !Ref RelayUsbDevice 
           USB_RELAY: !Ref RelayUsbDevice 
           OPEN_DELAY_SECONDS: !Ref OpenDelaySeconds
+
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties: 
+      TableName: !Ref DynamoDBTableName
+      AttributeDefinitions: 
+        - AttributeName: "name"
+          AttributeType: "S"
+        - AttributeName: "selector"
+          AttributeType: "S"
+      KeySchema: 
+        - AttributeName: "name"
+          KeyType: "HASH"
+        - AttributeName: "selector"
+          KeyType: "RANGE"
+      ProvisionedThroughput: 
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
 
 Outputs:
   apiurl:
