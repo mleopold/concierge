@@ -11,6 +11,9 @@ Parameters:
   TeamsWebhook:
     Type: String
 
+  WebhookURL:
+    Type: String
+
   DeviceName:
     Type: String
 
@@ -41,6 +44,11 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Ref BucketName
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOld
+            Status: Enabled
+            ExpirationInDays: 2
 
   conciergeApi:
     Type: AWS::Serverless::Api
@@ -97,8 +105,7 @@ Resources:
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
-          -
-            Effect: Allow
+          - Effect: Allow
             Principal:
               Service:
                 - "lambda.amazonaws.com"
@@ -171,7 +178,7 @@ Resources:
                   - "iot:DescribeEndpoint"
                 Resource: "*"
 
-  unknownRole:
+  backendRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -187,6 +194,8 @@ Resources:
       Path: "/"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccesswithDataPipeline
+        - arn:aws:iam::aws:policy/AWSIoTDataAccess 
       Policies:
         - PolicyName: "s3"
           PolicyDocument:
@@ -231,6 +240,7 @@ Resources:
                 Resource:
                   - !Sub arn:aws:s3:::${BucketName}
                   - !Sub arn:aws:s3:::${BucketName}/*
+                  - !Sub ARN:aws:s3:::${BucketName}*
 
 # lambda functions
   train:
@@ -288,12 +298,12 @@ Resources:
     Properties:
       FunctionName: concierge-rate-limit
       Description: "concierge - limit rate of detection events"
-      Handler: find_person.function_handler
-      Role: !GetAtt greengrassRole.Arn
+      Handler: rate_limit.lambda_handler
+      Role: !GetAtt backendRole.Arn
       Runtime: python2.7
       MemorySize: 2048
       Timeout: 10
-      CodeUri: ./source/find-person/dist/deployment.zip
+      CodeUri: ./source/rate-limit/deployment.zip
       AutoPublishAlias: prod
       Environment:
         Variables:
@@ -305,7 +315,7 @@ Resources:
         detectedEvent:
           Type: IoTRule
           Properties:
-            Sql: !Sub "SELECT * FROM '${IoTTopic}'"
+            Sql: !Sub SELECT * FROM '${IoTTopic}'
 
   notifyTeams:
     Type: AWS::Serverless::Function
@@ -313,10 +323,10 @@ Resources:
       FunctionName: concierge-notify-teams
       Description: "concierge - notify teams function"
       Handler: main
-      Role: !GetAtt unknownRole.Arn
+      Role: !GetAtt backendRole.Arn
       Runtime: go1.x
       MemorySize: 1024
-      Timeout: 10
+      Timeout: 60
       CodeUri: ./source/notify-teams/deployment.zip
       Environment:
         Variables:
@@ -324,12 +334,32 @@ Resources:
           TEAMS_WEBHOOK: !Ref TeamsWebhook
           TRAIN_URL: !Sub https://${conciergeApi}.execute-api.${AWS::Region}.amazonaws.com/api/faces/train
       Events:
-        detectedEvent:
+        rateLimitedEvent:
           Type: IoTRule
           Properties:
-            Sql: !Sub "SELECT * FROM '${IoTTopicRateLimited}'"
+            Sql: !Sub SELECT * FROM '${IoTTopicRateLimited}'
 
-# greengrass
+  triggerWebhook:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: concierge-trigger-webhook
+      Description: "concierge - trigger generic webhook function"
+      Handler: trigger_webhook.function_handler
+      Role: !GetAtt backendRole.Arn
+      Runtime: python3.7
+      MemorySize: 128
+      Timeout: 60
+      CodeUri: ./source/notify-teams/deployment.zip
+      Environment:
+        Variables:
+          WEBHOOK_URL: !Ref WebhookURL
+      Events:
+        rateLimitedEvent:
+          Type: IoTRule
+          Properties:
+            Sql: !Sub SELECT * FROM '${IoTTopicRateLimited}'
+
+  # greengrass
   findPerson:
     Type: AWS::Serverless::Function
     Properties:
