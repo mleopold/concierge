@@ -5,7 +5,7 @@ STACK_NAME         =  concierge
 ARTIFACTS_BUCKET   =  bucket-name-for-lambda-deployment
 AWS_DEFAULT_REGION ?= us-east-1
 
-DEPLOY_DEPS = source/guess/deployment.zip source/train/deployment.zip source/unknown/deployment.zip source/find-person/deployment.zip
+DEPLOY_DEPS = source/guess/deployment.zip source/train/deployment.zip source/notify-teams/deployment.zip source/trigger-open/dist/deployment.zip source/find-person/dist/deployment.zip
 
 sam_package = aws cloudformation package \
                 --template-file sam.yaml \
@@ -32,8 +32,8 @@ source/unknown/deployment.zip: source/unknown/main.go
 source/train/deployment.zip: source/train/main.go
 	cd source/train; GOOS=linux go build -ldflags="-s -w" -o main && zip deployment.zip main
 
-source/find-person/deployment.zip: source/find-person/find_person.py
-	cd source/find-person; mkdir dist \
+source/notify-teams/deployment.zip: source/notify-teams/main.go
+	cd source/notify-teams; GOOS=linux go build -ldflags="-s -w" -o main && zip deployment.zip main
 
 source/find-person/dist:
 	mkdir source/find-person/dist

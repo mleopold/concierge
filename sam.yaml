@@ -279,35 +279,23 @@ Resources:
                   - Name: prefix
                     Value: incoming/
 
-  unknown:
+  notifyTeams:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: concierge-unknown
-      Description: "concierge - unknown function"
+      FunctionName: concierge-notify-teams
+      Description: "concierge - notify teams function"
       Handler: main
       Role: !GetAtt unknownRole.Arn
       Runtime: go1.x
       MemorySize: 1024
       Timeout: 10
-      CodeUri: ./source/unknown/deployment.zip
+      CodeUri: ./source/notify-teams/deployment.zip
       Environment:
         Variables:
           BUCKET_NAME: !Ref BucketName
           TEAMS_WEBHOOK: !Ref TeamsWebhook
           TRAIN_URL: !Sub https://${conciergeApi}.execute-api.${AWS::Region}.amazonaws.com/api/faces/train
-      Events:
-        imageEvent:
-          Type: S3
-          Properties:
-            Bucket: !Ref bucket
-            Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: prefix
-                    Value: unknown/
-                  - Name: suffix
-                    Value: jpg
+
 
 # greengrass
   findPerson:
