@@ -42,7 +42,7 @@ def function_handler(event, context):
             ReturnValues="UPDATED_NEW"
         )
     except Exception as e:
-        print("Condition check failed") 
+        print("Condition check failed %s" % str(e)) 
         return
 
     print("Got reponse %s" % str(response))
