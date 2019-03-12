@@ -43,7 +43,7 @@ source/find-person/dist/deployment.zip: source/find-person/find_person.py source
 		&& cp find_person.py dist/ \
 		&& cd dist; zip deployment.zip *
 
-source/trigger-open/deployment.zip: source/trigger-open/trigger_open.py
+source/trigger-open/dist/deployment.zip: source/trigger-open/trigger_open.py
 	docker run -v ${PWD}/source/trigger-open:/app -w /app -it python:2.7-alpine sh -c "pip install -r requirements.txt -t ./dist; chmod -R 777 dist"
 		cd source/trigger-open && cp trigger_open.py dist/ \
 		&& cd dist/ && zip -r deployment.zip *
