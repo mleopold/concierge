@@ -8,7 +8,6 @@ from decimal import *
 webhook_url = os.environ['WEBHOOK_URL']
 grace = int(os.environ['GRACE'])
 post_data = json.dumps(os.environ['WEBHOOK_POST_DATA']) if 'WEBHOOK_POST_DATA' in os.environ else {}
-dynamodb_table = os.environ['DYNAMODB_TABLE']
 
 def function_handler(event, context):
     if 'username' not in event:
@@ -26,26 +25,6 @@ def function_handler(event, context):
         'statusCode': 500,
         'body': json.dumps(msg)
         }
-
-    now = time.time()
-    cutoff = now-grace
-    
-    dynamodb_client = boto3.client('dynamodb')
-    try:
-        response = dynamodb_client.update_item(
-            TableName=dynamodb_table,
-            Key={"name": {"S": "last-open"}},
-            UpdateExpression="SET #TS = :ts",
-            ExpressionAttributeNames={"#TS": "timestamp"},
-            ExpressionAttributeValues={":ts": {"N": str(now)}, ":cutoff": {"N": str(cutoff)}},
-            ConditionExpression=":cutoff > #TS",
-            ReturnValues="UPDATED_NEW"
-        )
-    except Exception as e:
-        print("Condition check failed %s" % str(e)) 
-        return
-
-    print("Got reponse %s" % str(response))
 
     response = requests.post(
         webhook_url, data=json.dumps(post_data),
