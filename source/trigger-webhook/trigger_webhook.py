@@ -6,7 +6,6 @@ import time
 from decimal import *
 
 webhook_url = os.environ['WEBHOOK_URL']
-grace = int(os.environ['GRACE'])
 post_data = json.dumps(os.environ['WEBHOOK_POST_DATA']) if 'WEBHOOK_POST_DATA' in os.environ else {}
 
 def function_handler(event, context):
