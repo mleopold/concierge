@@ -6,9 +6,13 @@ import awscam
 import cv2
 from botocore.session import Session
 from threading import Thread,Event,RLock
+import json
 
 # Setup the S3 client
 is_deeplens_upside_down = os.environ['IS_DEEPLENS_UPSIDE_DOWN']
+print_debug = True if 'DEBUG' in os.environ else False
+fullres_local_stream = True if 'FULLRES_STREAM' in os.environ else False
+overlay = True if 'OVERLAY' in os.environ else False
 
 print "is_deeplens_upside_down variable is set to: %s" % os.environ['IS_DEEPLENS_UPSIDE_DOWN']
 print "s3_bucket variable is set to: %s" % os.environ['BUCKET_NAME']
@@ -59,7 +63,7 @@ class S3Uploader(Thread):
             s3_key = datetime.datetime.utcnow().strftime('%Y-%m-%d_%H_%M_%S.%f') + '.jpg'
             filename = "incoming/%s" % s3_key  # the guess lambda function is listening here
             response = self.s3.put_object(Body=jpeg_data.tostring(),Bucket=self.s3_bucket,Key=filename)
-            print "Upload S3 to: %s in bucket %s" % (filename,self.s3_bucket)
+            if print_debug is True: print "Upload S3 to: %s in bucket %s" % (filename,self.s3_bucket)
             self.go.clear()
 
     def set_frame_data(self, frame):
@@ -81,6 +85,7 @@ def greengrass_infinite_infer_run():
         outMap = { 1: 'aeroplane', 2: 'bicycle', 3: 'bird', 4: 'boat', 5: 'bottle', 6: 'bus', 7 : 'car', 8 : 'cat', 9 : 'chair', 10 : 'cow', 11 : 'dinning table', 12 : 'dog', 13 : 'horse', 14 : 'motorbike', 15 : 'person', 16 : 'pottedplant', 17 : 'sheep', 18 : 'sofa', 19 : 'train', 20 : 'tvmonitor' }
         results_thread = FIFO_Thread()
         results_thread.start()
+        overlay_frame = None
 
         s3_thread = S3Uploader()
         s3_thread.start()
@@ -121,9 +126,15 @@ def greengrass_infinite_infer_run():
 
             # Output inference result to the fifo file so it can be viewed with mplayer
             parsed_results = model.parseResult(modelType, inferOutput)[modelType]
+            #l_img[y_offset:y_offset+s_img.shape[0], x_offset:x_offset+s_img.shape[1]] = s_img
+
+            if print_debug is True: print ("Parsing returned: %s" % json.dumps(parsed_results))
+
             label = '{'
             last_person = 0.0
+            lables_found = []
             for obj in parsed_results:
+                lables_found.append(outMap[obj['label']])
                 now = time.time()
                 if obj['prob'] > max_threshold:
                     xmin = int( xscale * obj['xmin'] ) + int((obj['xmin'] - input_width/2) + input_width/2)
@@ -137,6 +148,7 @@ def greengrass_infinite_infer_run():
 
                         # get the person image
                         person = frame[ymin:ymax, xmin:xmax]
+                        overlay_frame = person
                         s3_thread.set_frame_data(person)
 
                     # draw a rectangle around the designated area, and tell what label was found
@@ -147,8 +159,17 @@ def greengrass_infinite_infer_run():
             label += '"null": 0.0'
             label += '}'
 
+            # Add overlay in lower right corner
+            if overlay is True and overlay_frame is not None:
+                y_offset = frame.shape[0]-overlay_frame.shape[0]
+                x_offset = frame.shape[1]-overlay_frame.shape[1]
+                frame[y_offset:frame.shape[0], x_offset:frame.shape[1]] = overlay_frame
+
+            if print_debug is True: print ("Found Lables: %s" % str(sorted(set(lables_found))))
+            if fullres_local_stream is False: frame = cv2.resize(frame, (858, 480))
+
             global jpeg
-            ret,jpeg = cv2.imencode('.jpg', cv2.resize(frame, (858, 480)))
+            ret,jpeg = cv2.imencode('.jpg', frame)
 
     except Exception as e:
         print "Crap, something failed: %s" % str(e)
