@@ -354,7 +354,7 @@ Resources:
       Runtime: python3.7
       MemorySize: 128
       Timeout: 60
-      CodeUri: ./source/notify-teams/deployment.zip
+      CodeUri: ./source/trigger-webhook/deployment.zip
       Environment:
         Variables:
           WEBHOOK_URL: !Ref WebhookURL
