@@ -38,6 +38,11 @@ Parameters:
   DynamoDBTableName: 
     Type: String
 
+  SlackOauthAccessToken:
+    Type: String
+
+  SlackChannelId:
+    Type: String
 
 Resources:
   bucket:
@@ -359,7 +364,54 @@ Resources:
           Properties:
             Sql: !Sub SELECT * FROM '${IoTTopicRateLimited}'
 
-  # greengrass
+  notifySlack:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: concierge-notify-slack
+      Description: "concierge - trigger notify slack function"
+      Handler: notify_slack.function_handler
+      Role: !GetAtt backendRole.Arn
+      Runtime: python3.7
+      MemorySize: 128
+      Timeout: 60
+      CodeUri: ./source/notify-slack/deployment.zip
+      Environment:
+        Variables:
+          SLACK_API_URL: https://slack.com/api/
+          SLACK_API_TOKEN: sdf
+          SLACK_CHANNEL_ID: !Ref SlackChannelId
+          BUCKET_NAME: !Ref BucketName
+      Events:
+        rateLimitedEvent:
+          Type: IoTRule
+          Properties:
+            Sql: !Sub SELECT * FROM '${IoTTopicRateLimited}'
+  trainSlack:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: concierge-train-slack
+      Description: "concierge - trigger train½ slack function"
+      Handler: notify_slack.train
+      Role: !GetAtt trainRole.Arn
+      Runtime: python3.7
+      MemorySize: 128
+      Timeout: 60
+      CodeUri: ./source/train-slack/deployment.zip
+      Environment:
+        Variables:
+          SLACK_API_URL: https://slack.com/api/
+          SLACK_API_TOKEN: !Ref SlackOauthAccessToken
+          SLACK_CHANNEL_ID: !Ref SlackChannelId
+          BUCKET_NAME: !Ref BucketName
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref conciergeApi
+            Path: /faces/train-slack
+            Method: post
+
+            # greengrass
   findPerson:
     Type: AWS::Serverless::Function
     Properties:

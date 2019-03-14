@@ -7,7 +7,11 @@ source/notify-teams/deployment.zip
 source/notify-teams/main
 source/train/main
 source/train/deployment.zip
+source/train-slack/deployment.zip
 source/unknown/deployment.zip
 source/unknown/main
 source/rate-limit/deployment.zip
+source/find-face/deployment.zip
+source/notify-slack/deployment.zip
+source/trigger-webhook/deployment.zip
 dist/

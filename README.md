@@ -54,20 +54,14 @@ Quite a few steps, needs cleanup, most of it can be automated.
 - Deploy the Lambda functions with make (verify env variables in the Makefile)
 
 - Go into the deeplens console, and create a project, choose "Use a project template" select the "Object detection" model
-- Remove the `deeplens-object-detection` function, and add a function for `find_person` and `trigger_open`
-  - Leave out `trigger_open` if you don't plan to use this way of unlocking the door
-- If its empty when you start you can choose to add the deeplens-object-detection model and add the `find_person` and `trigger_open` function.
-- Deploy the application to your deeplens
+    - Remove the `deeplens-object-detection` function, and add a function for `find_person` and `trigger_open`
+        - Leave out `trigger_open` if you don't plan to use this way of unlocking the door
+    - If its empty when you start you can choose to add the deeplens-object-detection model and add the `find_person` and `trigger_open` function.
+    - Deploy the application to your deeplens
+- For notification there's two options: Microsoft Teams and Slack:
+   - **Slack** Set up up a Slack app as described in the [Doorman app](https://github.com/svdgraaf/doorman). Insert the encoded channel id and OAuth token in parameters.conf
+   - **Teams** Set up [Webhook Connector](https://docs.microsoft.com/en-us/microsoftteams/platform/concepts/connectors/connectors-using) and insert TeamsWebhookUrl in parameters.conf
 - For webhook based actions: If you have a solution that is able to work off a simple webhook e.g. using [MicroBot Push](https://microbot.is/push/), [SwitchBot](https://www.switch-bot.com/) or [IFTTT](https://ifttt.com/). The following will trigger the webhook from the detected event on the IoT queue
-  - Create a DynmoDB table, e.g.
-    - ```aws dynamodb create-table --table-name concierge_sletmit --attribute-definitions '{ "AttributeName": "name", "AttributeType": "S" }' --key-schema '{ "AttributeName": "name", "KeyType": "HASH" }' --provisioned-throughput '{"ReadCapacityUnits": 5, "WriteCapacityUnits": 5}'```
-  - Create a new lambda and copy code from ´trigger_webhook.py`
-    - Add an IoT trigger with a Custom IoT rule with the floowing Rule query statement: ```SELECT * FROM 'concierge-detected'``
-    - Add the environment variables: 
-        - `DYNAMODB_TABLE`: Name of the table created above
-        - `GRACE`: 60 (the limit on how often the button is pushed)
-        - `WEBHOOK_URL`: <URL to the webhook> (a post request will executed)
-        - `WEBHOOK_POST_DATA`: Optionaly any additional static post-data to send to webhook (json string)
 
 Troubleshooting
 ---
