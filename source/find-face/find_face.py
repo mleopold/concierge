@@ -168,10 +168,10 @@ def infinite_infer_run():
                 if obj['prob'] > detection_threshold:
                     now = time.time()
                     # Add bounding boxes to full resolution frame
-                    xmin = int(xscale * obj['xmin'] * 0.9)
-                    ymin = int(yscale * obj['ymin'] * 0.9)
-                    xmax = int(xscale * obj['xmax'] * 1.1) % frame.shape[1]
-                    ymax = int(yscale * obj['ymax'] * 1.1) % frame.shape[0]
+                    xmin = int(xscale * obj['xmin'] * 0.98)
+                    xmax = int(xscale * obj['xmax'] * 1.02) % frame.shape[1]
+                    ymin = int(yscale * obj['ymin'] * 0.88)
+                    ymax = int(yscale * obj['ymax'] * 1.05) % frame.shape[0]
                     # See https://docs.opencv.org/3.4.1/d6/d6e/group__imgproc__draw.html
                     # for more information about the cv2.rectangle method.
                     # Method signature: image, point1, point2, color, and tickness.
@@ -203,7 +203,7 @@ def infinite_infer_run():
             # Set the next frame in the local display stream.
             local_display.set_frame_data(frame)
             # Send results to the cloud
-            print(json.dumps(cloud_output))
+            if len(cloud_output): print(json.dumps(cloud_output))
     except Exception as e:
         print("Crap, something failed: %s" % str(e))
 
