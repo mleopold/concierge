@@ -1,4 +1,4 @@
-# Concierge
+    # Concierge
 
 A AWS Deeplens application that will identify a person with in its range, when it finds a person will send the picture to a S3 bucket to be analyzed by the aws recognition service. If it is a known person it will put a open command to a topic that will be consumed by the same deeplens again that will trigger a USB relay. The USB relay should be connected to a "open door button" so the person can open the door without a access tag
 
@@ -53,11 +53,15 @@ Quite a few steps, needs cleanup, most of it can be automated.
 
 - Deploy the Lambda functions with make (verify env variables in the Makefile)
 
-- Go into the deeplens console, and create a project, choose "Use a project template" select the "Object detection" model
-    - Remove the `deeplens-object-detection` function, and add a function for `find_person` and `trigger_open`
-        - Leave out `trigger_open` if you don't plan to use this way of unlocking the door
-    - If its empty when you start you can choose to add the deeplens-object-detection model and add the `find_person` and `trigger_open` function.
-    - Deploy the application to your deeplens
+- For the deeplens embedded model. There are two alternatives based on different models. The procedure to deploy is the same, but the functions and model differ.
+  - **Object detection** Using the 'object detection' model with the function find_persion.py
+  - **Face detection** Using the 'face detection' model with the function find_face.py
+  - For either Go into the deeplens console, and create a project, choose "Use a project template" and select the appropriate project, e.g. for object detection:
+        - select the "Object detection" model
+        - Remove the `deeplens-object-detection` function, and add a function for `find_person` and `trigger_open`
+            - Leave out `trigger_open` if you don't plan to use this way of unlocking the door
+        - If its empty when you start you can choose to add the deeplens-object-detection model and add the `find_person` and `trigger_open` function.
+        - Deploy the application to your deeplens
 - For notification there's two options: Microsoft Teams and Slack:
    - **Slack** Set up up a Slack app as described in the [Doorman app](https://github.com/svdgraaf/doorman). Insert the encoded channel id and OAuth token in parameters.conf
    - **Teams** Set up [Webhook Connector](https://docs.microsoft.com/en-us/microsoftteams/platform/concepts/connectors/connectors-using) and insert TeamsWebhookUrl in parameters.conf

@@ -428,6 +428,26 @@ Resources:
         Variables:
           BUCKET_NAME: !Ref BucketName
           IS_DEEPLENS_UPSIDE_DOWN: !Ref IsDeeplensUpsideDown
+          FULLRES_STREAM: False
+          OVERLAY: True          
+  findFace:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: concierge-find-face
+      Description: "concierge - find face function (greengrass)"
+      Handler: find_face.function_handler
+      Role: !GetAtt greengrassRole.Arn
+      Runtime: python2.7
+      MemorySize: 2048
+      Timeout: 10
+      CodeUri: ./source/find-face/deployment.zip
+      AutoPublishAlias: prod
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref BucketName
+          IS_DEEPLENS_UPSIDE_DOWN: !Ref IsDeeplensUpsideDown
+          FULLRES_STREAM: False
+          OVERLAY: True          
 
   triggerOpen:
     Type: AWS::Serverless::Function

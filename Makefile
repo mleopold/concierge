@@ -5,7 +5,16 @@ STACK_NAME         =  concierge
 ARTIFACTS_BUCKET   =  bucket-name-for-lambda-deployment
 AWS_DEFAULT_REGION ?= us-east-1
 
-DEPLOY_DEPS = source/guess/deployment.zip source/train/deployment.zip source/notify-teams/deployment.zip source/trigger-open/dist/deployment.zip source/find-person/dist/deployment.zip source/rate-limit/deployment.zip
+DEPLOY_DEPS = source/guess/deployment.zip \
+			  source/train/deployment.zip \
+			  source/notify-teams/deployment.zip \
+			  source/trigger-open/dist/deployment.zip \
+			  source/find-person/dist/deployment.zip \
+			  source/rate-limit/deployment.zip \
+			  source/find-face/deployment.zip \
+			  source/trigger-webhook/deployment.zip \
+			  source/notify-slack/deployment.zip \
+			  source/train-slack/deployment.zip
 
 sam_package = aws cloudformation package \
                 --template-file sam.yaml \
@@ -40,8 +49,20 @@ source/find-person/dist/deployment.zip: source/find-person/find_person.py
 		&& cp find_person.py dist/ \
 		&& cd dist; zip deployment.zip *
 
+source/find-face/deployment.zip: source/find-face/find_face.py
+	cd source/find-face && zip deployment.zip find_face.py
+
 source/rate-limit/deployment.zip: source/rate-limit/rate_limit.py
 	cd source/rate-limit && zip deployment.zip rate_limit.py
+
+source/trigger-webhook/deployment.zip: source/trigger-webhook/trigger_webhook.py
+	cd source/trigger-webhook/ && zip deployment.zip trigger_webhook.py
+
+source/notify-slack/deployment.zip: source/notify-slack/notify_slack.py
+	cd source/notify-slack && zip deployment.zip notify_slack.py
+
+source/train-slack/deployment.zip: source/train-slack/train_slack.py
+	cd source/train-slack && zip deployment.zip train_slack.py
 
 source/trigger-open/dist/deployment.zip: source/trigger-open/trigger_open.py
 	docker run -v ${PWD}/source/trigger-open:/app -w /app -it python:2.7-alpine sh -c "pip install -r requirements.txt -t ./dist; chmod -R 777 dist"
