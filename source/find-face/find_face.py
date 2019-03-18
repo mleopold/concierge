@@ -191,8 +191,13 @@ def infinite_infer_run():
                     # Upload person frame to s3
                     if now-last_person > 2.0:
                         last_person = now
-                        overlay_frame = frame[ymin:ymax, xmin:xmax]
-                        s3_thread.set_frame_data(overlay_frame)
+                        cutout = frame[ymin:ymax, xmin:xmax]
+                        if cutout is not None and len(cutout.shape)==3 and cutout.shape[0]>0 and cutout.shape[1]>0:
+                            s3_thread.set_frame_data(cutout)
+                            overlay_y = int(frame.shape[0]/3)
+                            scale_factor = overlay_y/float(cutout.shape[0])
+                            overlay_x = int(cutout.shape[1]*scale_factor)
+                            overlay_frame = cv2.resize(cutout, (overlay_x,overlay_y))
 
             # Add overlay in lower right corner
             if overlay is True and overlay_frame is not None:
